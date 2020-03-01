@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
-	"reflect"
-	"strings"
 )
 
 // Unfortunately signald-go is not written in idiomatic Go and panics if unable
@@ -53,12 +51,11 @@ func (c *Client) connect() error {
 }
 
 func (c *Client) Encode(req interface{}) error {
-	 request, ok := req.(*Request)
-	 if !ok {
-		return errors.New("Argument to Encode not convertable to a *signald.Request")
+	typed, ok := req.(Typed)
+	if !ok {
+		return errors.New("Argument to Encode not convertable to a signald.Typer")
 	}
-	t := strings.ToLower(reflect.TypeOf(req).Name())
-	request.Type = t
+	typed.SetType(typed.Type())
 	if c.conn == nil {
 		err := c.connect()
 		if err != nil {

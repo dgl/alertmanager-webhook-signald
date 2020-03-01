@@ -1,7 +1,16 @@
 package signald
 
+type Typed interface {
+	Type() string
+	SetType(string)
+}
+
 type Request struct {
   Type string `json:"type"`
+}
+
+func (r *Request) SetType(t string) {
+	r.Type = t
 }
 
 type Send struct {
@@ -12,6 +21,10 @@ type Send struct {
 	MessageBody string `json:"messageBody"`
 	//Attachments []Attachment `json:"attachments"`
 	Quote Quote `json:"quote"`
+}
+
+func (s Send) Type() string {
+	return "send"
 }
 
 type Quote struct {
