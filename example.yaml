@@ -1,0 +1,14 @@
+defaults:
+  # Phone number of sender, must be registered in this signald per Setup.
+  sender: +1xxx
+  template: "{{ template ...}}"
+
+templates:
+  - "alerts.tmpl"
+
+receivers:
+  - name: something
+    to:
+      - group:xxxx
+      - tel:+44...
+    # Optional: the sender, template fields as in defaults above.
