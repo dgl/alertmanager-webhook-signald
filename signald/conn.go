@@ -69,6 +69,10 @@ func (c *Client) Encode(req interface{}) error {
 }
 
 func (c *Client) Decode(res *Response) error {
+	if c.decoder == nil {
+		// We only connect when trying to send
+		return errors.New("Not connected")
+	}
 	// XXX: need to interrupt if reconnected
 	return c.decoder.Decode(res)
 }

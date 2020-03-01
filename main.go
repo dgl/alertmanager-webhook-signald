@@ -8,6 +8,7 @@ import (
 	"log"
   "net/http"
 	"strings"
+	"time"
 
 	"./signald"
 )
@@ -49,8 +50,23 @@ func main() {
 		log.Printf("Error connecting to signald: %v, will attempt to connect later", err)
 	}
 
+	go logOutput()
+
   http.HandleFunc("/alert", hook)
   log.Fatal(http.ListenAndServe(*flagListen, nil))
+}
+
+func logOutput() {
+	for {
+		var res signald.Response
+		err := signalClient.Decode(&res)
+		if err != nil {
+			log.Print(err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		log.Print(res)
+	}
 }
 
 func hook(w http.ResponseWriter, req *http.Request) {
