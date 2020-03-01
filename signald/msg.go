@@ -16,11 +16,11 @@ func (r *Request) SetType(t string) {
 type Send struct {
 	Request
 	Username string `json:"username"`
-	RecipientNumber string `json:"recipientNumber"`
-	RecipientGroupID string `json:"recipientGroupId"`
+	RecipientNumber string `json:"recipientNumber,omitempty"`
+	RecipientGroupID string `json:"recipientGroupId,omitempty"`
 	MessageBody string `json:"messageBody"`
 	//Attachments []Attachment `json:"attachments"`
-	Quote Quote `json:"quote"`
+	Quote Quote `json:"quote,omitempty"`
 }
 
 func (s Send) Type() string {

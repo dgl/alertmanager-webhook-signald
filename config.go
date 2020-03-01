@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -10,7 +11,7 @@ import (
 type Config struct {
 	Defaults Receiver `yaml:"defaults"`
 	Templates []string `yaml:"templates"`
-	Receivers []Receiver `yaml:"receivers"`
+	Receivers []*Receiver `yaml:"receivers"`
 }
 
 type Receiver struct {
@@ -56,7 +57,9 @@ func resolveFilepaths(baseDir string, cfg *Config) {
 }
 
 func expandDefaults(cfg *Config) {
+	log.Printf("0 %#v", cfg.Defaults)
 	for _, recv := range cfg.Receivers {
+		log.Printf("1 %#v", recv)
 		if len(recv.Template) == 0 {
 			recv.Template = cfg.Defaults.Template
 		}
@@ -66,5 +69,6 @@ func expandDefaults(cfg *Config) {
 		if len(recv.To) == 0 {
 			recv.To = cfg.Defaults.To
 		}
+		log.Printf("2 %#v", recv)
 	}
 }

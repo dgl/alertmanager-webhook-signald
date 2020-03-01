@@ -42,7 +42,7 @@ func main() {
 		if _, ok := receivers[recv.Name]; ok {
 			log.Fatalf("Duplicate receiver name: %q", recv.Name)
 		}
-		receivers[recv.Name] = &recv
+		receivers[recv.Name] = recv
 	}
 
 	signalClient, err = signald.New()
@@ -90,6 +90,7 @@ func handle(m *Message) error {
 	if !ok {
 		return errors.New("Receiver not configured")
 	}
+	log.Printf("Send via %v: %#v", m.Receiver, recv)
 	var err error
 	for _, to := range recv.To {
 		send := &signald.Send{

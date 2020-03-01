@@ -4,6 +4,7 @@ package signald
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 )
 
@@ -62,6 +63,8 @@ func (c *Client) Encode(req interface{}) error {
 			return err
 		}
 	}
+	j, _ := json.Marshal(req)
+	log.Printf("JSON: %s", string(j))
 	return c.encoder.Encode(req)
 }
 
