@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"./signald"
+	"github.com/prometheus/alertmanager/template"
+
+	"github.com/dgl/alertmanager-webhook-signald/signald"
 )
 
 var (
@@ -20,6 +22,7 @@ var (
 	signalClient *signald.Client
 	cfg *Config
 	receivers = map[string]*Receiver{}
+	templates *template.Template
 )
 
 func main() {
@@ -43,6 +46,11 @@ func main() {
 			log.Fatalf("Duplicate receiver name: %q", recv.Name)
 		}
 		receivers[recv.Name] = recv
+	}
+
+	templates, err = template.FromGlobs(cfg.Templates...)
+	if err != nil {
+		log.Fatalf("Error parsing templates: %v", err)
 	}
 
 	signalClient, err = signald.New()
@@ -91,11 +99,16 @@ func handle(m *Message) error {
 		return errors.New("Receiver not configured")
 	}
 	log.Printf("Send via %v: %#v", m.Receiver, recv)
-	var err error
+
+	body, err := templates.ExecuteTextString(recv.Template, m)
+	if err != nil {
+		body = fmt.Sprintf("%#v: Template expansion failed: %v", m.GroupLabels, err)
+	}
+
 	for _, to := range recv.To {
 		send := &signald.Send{
 			Username: recv.Sender,
-			MessageBody: "alert", // XXX: template
+			MessageBody: body,
 		}
 		if strings.HasPrefix(to, "tel:") {
 			send.RecipientNumber = to[4:]

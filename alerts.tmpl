@@ -1,0 +1,12 @@
+{{ define "signal.message" }}
+{{ .CommonLabels.severity }}: {{ .CommonLabels.job }} {{ .CommonLabels.alertname }}
+{{- $lastsummary := "" -}}
+{{- range $alert := .Alerts -}}
+  {{- if not (eq $lastsummary $alert.Annotations.summary) }}
+  - {{ $alert.Annotations.summary -}}
+  {{- $lastsummary = $alert.Annotations.summary -}}
+  {{- end -}}
+{{- end }}
+
+{{ .ExternalURL }}
+{{- end }}

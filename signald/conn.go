@@ -54,7 +54,7 @@ func (c *Client) connect() error {
 func (c *Client) Encode(req interface{}) error {
 	typed, ok := req.(Typed)
 	if !ok {
-		return errors.New("Argument to Encode not convertable to a signald.Typer")
+		return errors.New("Argument to Encode not convertable to a signald.Typed")
 	}
 	typed.SetType(typed.Type())
 	if c.conn == nil {
