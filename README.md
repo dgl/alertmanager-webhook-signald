@@ -16,7 +16,7 @@ registered in signald. Set this number as the 'sender' in the config below.
 defaults:
   # Phone number of sender, must be registered in this signald per Setup.
   sender: +1xxx
-  template: "{{ template ...}}"
+  template: '{{ template "signal.message" . }}'
 
 templates:
   - "alerts.tmpl"
