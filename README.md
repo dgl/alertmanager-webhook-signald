@@ -39,7 +39,7 @@ See [example.yaml](example.yaml) for a more complete configuration example.
 receivers:
   - name: something
     webhook_configs:
-      - url: http://localhost:9245/alert
+      - url: http://localhost:9716/alert
 ```
 
 The receiver name defined in alertmanager configuration will be sent to the
@@ -56,7 +56,7 @@ Configure Prometheus to scrape it:
 scrape_configs:
   - job_name: alertmanager-signald-webhook
     static_configs:
-      - targets: ['localhost:9245']
+      - targets: ['localhost:9716']
 ```
 
 Configure some rules like the rules in [example-rules.yaml](example-rules.yaml)

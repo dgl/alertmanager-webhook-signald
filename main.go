@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	flagListen = flag.String("listen", ":9245", "[ip]:port to listen on for HTTP")
+	flagListen = flag.String("listen", ":9716", "[ip]:port to listen on for HTTP")
 	flagConfig = flag.String("config", "", "YAML configuration filename")
 
 	signalClient *signald.Client
