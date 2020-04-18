@@ -64,15 +64,34 @@ func (c *Client) Encode(req interface{}) error {
 		}
 	}
 	j, _ := json.Marshal(req)
-	log.Printf("JSON: %s", string(j))
+	log.Printf("> %s", string(j))
 	return c.encoder.Encode(req)
 }
 
-func (c *Client) Decode(res *Response) error {
+func (c *Client) Decode() (interface{}, error) {
 	if c.decoder == nil {
 		// We only connect when trying to send
-		return errors.New("Not connected")
+		return nil, errors.New("Not connected")
 	}
+	var t json.RawMessage
 	// XXX: need to interrupt if reconnected
-	return c.decoder.Decode(res)
+	err := c.decoder.Decode(&t)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("< %s", string(t))
+	var req Request
+	err = json.Unmarshal(t, &req)
+	if err != nil {
+		return nil, err
+	}
+	typer, ok := typeMap[req.Type]
+	var msg interface{}
+	if !ok {
+		msg = make(map[string]interface{})
+	} else {
+		msg = typer.New()
+	}
+	err = json.Unmarshal(t, msg)
+	return msg, err
 }

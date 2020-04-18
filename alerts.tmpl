@@ -1,5 +1,6 @@
-{{ define "signal.message" }}
-{{ .CommonLabels.severity }}: {{ .CommonLabels.job }} {{ .CommonLabels.alertname }}
+{{- define "signal.message" }}
+{{- if eq .Status "resolved"}}[Resolved] {{ end -}}
+{{- .CommonLabels.severity }}: {{ .CommonLabels.job }} {{ .CommonLabels.alertname }}
 {{- $lastsummary := "" -}}
 {{- range $alert := .Alerts -}}
   {{- if not (eq $lastsummary $alert.Annotations.summary) }}

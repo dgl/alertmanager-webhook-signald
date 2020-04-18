@@ -17,6 +17,7 @@ type Receiver struct {
   Name string `yaml:"name"`
 	Template string `yaml:"template"`
 	Sender string `yaml:"sender"`
+	Subscribe *bool `yaml:"subscribe"`
 	To []string `yaml:"to"`
 }
 
@@ -65,6 +66,9 @@ func expandDefaults(cfg *Config) {
 		}
 		if len(recv.To) == 0 {
 			recv.To = cfg.Defaults.To
+		}
+		if recv.Subscribe == nil {
+			recv.Subscribe = cfg.Defaults.Subscribe
 		}
 	}
 }

@@ -2,6 +2,7 @@ defaults:
   # Phone number of sender, must be registered in this signald per Setup.
   sender: +1xxx
   template: '{{ template "signal.message" . }}'
+  subscribe: true
 
 templates:
   - "alerts.tmpl"

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -58,6 +57,20 @@ func main() {
 		log.Printf("Error connecting to signald: %v, will attempt to connect later", err)
 	}
 
+	// Subscribe if subscribe is true, this helps keep the signal connection alive, even if we don't
+	// do anything with the incoming messages.
+	subscribe := map[string]bool{}
+	for _, recv := range cfg.Receivers {
+		if recv.Subscribe != nil && *recv.Subscribe {
+			subscribe[recv.Sender] = true
+		}
+	}
+	for user := range subscribe {
+		signalClient.Encode(&signald.Subscribe{
+			Username: user,
+		})
+	}
+
 	go logOutput()
 
   http.HandleFunc("/alert", hook)
@@ -66,8 +79,7 @@ func main() {
 
 func logOutput() {
 	for {
-		var res signald.Response
-		err := signalClient.Decode(&res)
+		res, err := signalClient.Decode()
 		if err != nil {
 			log.Print(err)
 			time.Sleep(10 * time.Second)
@@ -96,9 +108,9 @@ func hook(w http.ResponseWriter, req *http.Request) {
 func handle(m *Message) error {
 	recv, ok := receivers[m.Receiver]
 	if !ok {
-		return errors.New("Receiver not configured")
+		return fmt.Errorf("%q: Receiver not configured", m.Receiver)
 	}
-	log.Printf("Send via %v: %#v", m.Receiver, recv)
+	log.Printf("Send via %q: %#v", m.Receiver, recv)
 
 	body, err := templates.ExecuteTextString(recv.Template, m)
 	if err != nil {
