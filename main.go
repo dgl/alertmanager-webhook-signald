@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
   "net/http"
 	"strings"
 	"time"
@@ -26,6 +27,9 @@ var (
 
 func main() {
   flag.Parse()
+	if *flagConfig == "" {
+		flag.Usage()
+	}
 
 	var err error
 	cfg, err = LoadFile(*flagConfig)
@@ -71,21 +75,35 @@ func main() {
 		})
 	}
 
-	go logOutput()
+	go handleOutput()
 
   http.HandleFunc("/alert", hook)
   log.Fatal(http.ListenAndServe(*flagListen, nil))
 }
 
-func logOutput() {
+// Handles output from signald and deals with reconnection logic
+func handleOutput() {
+	backoff := 0.0
 	for {
-		res, err := signalClient.Decode()
-		if err != nil {
-			log.Print(err)
-			time.Sleep(10 * time.Second)
-			continue
+		for signalClient.Connected() {
+			res, err := signalClient.Decode()
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			log.Print(res)
 		}
-		log.Print(res)
+
+		time.Sleep(time.Duration(math.Pow(2, backoff)) * time.Second)
+		if backoff < 6 {
+			backoff += 1
+		}
+		if err := signalClient.Connect(); err != nil {
+			log.Printf("Failed to reconnect: %v", err)
+		} else {
+			log.Print("Connected to signald")
+			backoff = 0
+		}
 	}
 }
 

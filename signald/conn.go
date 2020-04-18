@@ -51,6 +51,23 @@ func (c *Client) connect() error {
 	return nil
 }
 
+func (c *Client) Connect() error {
+	if c.conn == nil {
+		return c.connect()
+	}
+	return nil
+}
+
+func (c *Client) Connected() bool {
+	return c.conn != nil
+}
+
+func (c *Client) Disconnect() error {
+	conn := c.conn
+	c.conn = nil
+	return conn.Close()
+}
+
 func (c *Client) Encode(req interface{}) error {
 	typed, ok := req.(Typed)
 	if !ok {
@@ -69,14 +86,18 @@ func (c *Client) Encode(req interface{}) error {
 }
 
 func (c *Client) Decode() (interface{}, error) {
-	if c.decoder == nil {
+	if c.conn == nil {
 		// We only connect when trying to send
 		return nil, errors.New("Not connected")
 	}
 	var t json.RawMessage
-	// XXX: need to interrupt if reconnected
 	err := c.decoder.Decode(&t)
 	if err != nil {
+		// Force a reconnection if needed
+		if c.conn != nil {
+			c.conn.Close()
+		}
+		c.conn = nil
 		return nil, err
 	}
 	log.Printf("< %s", string(t))
@@ -88,7 +109,8 @@ func (c *Client) Decode() (interface{}, error) {
 	typer, ok := typeMap[req.Type]
 	var msg interface{}
 	if !ok {
-		msg = make(map[string]interface{})
+		m := make(map[string]interface{})
+		msg = &m
 	} else {
 		msg = typer.New()
 	}
