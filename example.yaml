@@ -7,6 +7,11 @@ defaults:
 templates:
   - "alerts.tmpl"
 
+options:
+  # Send a query to the server, which the last response time to is exported in
+  # signald_webhook_signal_keepalive_seconds (see example-rules.yaml too).
+  keep_alive: true
+
 receivers:
   - name: something
     to:

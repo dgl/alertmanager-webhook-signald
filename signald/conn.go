@@ -13,13 +13,14 @@ import (
 // without complex panic handling. This client manages reconnecting if needed.
 
 const (
-  DefaultPath = "/var/run/signald/signald.sock"
+	DefaultPath = "/var/run/signald/signald.sock"
 )
 
 // Client represents a connection to a signald server.
 type Client struct {
-  path string
-  conn net.Conn
+	path    string
+	conn    net.Conn
+	id      int
 	encoder *json.Encoder
 	decoder *json.Decoder
 }
@@ -28,21 +29,21 @@ type Client struct {
 // If an error is returned the client is still valid and calling Encode will
 // attempt to reconnect.
 func New() (*Client, error) {
-  return NewPath(DefaultPath)
+	return NewPath(DefaultPath)
 }
 
 // NewPath is as new, but allows specifying the path to connect to.
 func NewPath(path string) (*Client, error) {
-  client := &Client{
-    path: path,
-  }
-  return client, client.connect()
+	client := &Client{
+		path: path,
+	}
+	return client, client.connect()
 }
 
 func (c *Client) connect() error {
 	c.conn = nil
-  conn, err := net.Dial("unix", c.path)
-  if err != nil {
+	conn, err := net.Dial("unix", c.path)
+	if err != nil {
 		return err
 	}
 	c.conn = conn
@@ -80,6 +81,8 @@ func (c *Client) Encode(req interface{}) error {
 			return err
 		}
 	}
+	c.id += 1
+	typed.SetID(c.id)
 	j, _ := json.Marshal(req)
 	log.Printf("> %s", string(j))
 	return c.encoder.Encode(req)

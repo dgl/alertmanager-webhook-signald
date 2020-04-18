@@ -6,28 +6,67 @@ import (
 	"fmt"
 	"log"
 	"math"
-  "net/http"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/dgl/alertmanager-webhook-signald/signald"
 )
 
 var (
-  flagListen = flag.String("listen", ":9245", "[ip]:port to listen on for HTTP")
+	flagListen = flag.String("listen", ":9245", "[ip]:port to listen on for HTTP")
 	flagConfig = flag.String("config", "", "YAML configuration filename")
 
 	signalClient *signald.Client
-	cfg *Config
-	receivers = map[string]*Receiver{}
-	templates *template.Template
+	cfg          *Config
+	receivers    = map[string]*Receiver{}
+	templates    *template.Template
 )
 
+var (
+	receivedMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "signald_webhook",
+			Subsystem: "alerts",
+			Name:      "received_total",
+		})
+	errorsMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "signald_webhook",
+			Subsystem: "alerts",
+			Name:      "errors_total",
+		}, []string{"type"})
+
+	signaldInfoMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "signald_webhook",
+			Subsystem: "signal",
+			Name:      "info",
+		}, []string{"name", "version"})
+	signaldLastKeepaliveMetric = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "signald_webhook",
+			Subsystem: "signal",
+			Name:      "keepalive",
+		})
+)
+
+func init() {
+	prometheus.Register(receivedMetric)
+	prometheus.Register(errorsMetric)
+	prometheus.Register(signaldInfoMetric)
+	prometheus.Register(signaldLastKeepaliveMetric)
+	for _, errorType := range []string{"decode", "handler"} {
+		errorsMetric.With(prometheus.Labels{"type": errorType}).Add(0)
+	}
+}
+
 func main() {
-  flag.Parse()
+	flag.Parse()
 	if *flagConfig == "" {
 		flag.Usage()
 	}
@@ -62,6 +101,21 @@ func main() {
 		log.Printf("Error connecting to signald: %v, will attempt to connect later", err)
 	}
 
+	prometheus.Register(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "signald_webhook",
+			Subsystem: "signal",
+			Name:      "connected",
+			Help:      "True if connected to signald.",
+		},
+		func() float64 {
+			if signalClient.Connected() {
+				return 1
+			}
+			return 0
+		},
+	))
+
 	// Subscribe if subscribe is true, this helps keep the signal connection alive, even if we don't
 	// do anything with the incoming messages.
 	subscribe := map[string]bool{}
@@ -77,10 +131,11 @@ func main() {
 	}
 
 	go handleOutput()
+	go keepalive()
 
-  http.HandleFunc("/alert", hook)
+	http.HandleFunc("/alert", hook)
 	http.Handle("/metrics", promhttp.Handler())
-  log.Fatal(http.ListenAndServe(*flagListen, nil))
+	log.Fatal(http.ListenAndServe(*flagListen, nil))
 }
 
 // Handles output from signald and deals with reconnection logic
@@ -93,7 +148,15 @@ func handleOutput() {
 				log.Print(err)
 				continue
 			}
-			log.Print(res)
+
+			log.Printf("%T: %v", res, res)
+			switch r := res.(type) {
+			case *signald.Version:
+				signaldInfoMetric.With(
+					prometheus.Labels{"name": r.Data["name"], "version": r.Data["version"]}).Set(1)
+			case *signald.User:
+				signaldLastKeepaliveMetric.Set(float64(time.Now().Unix()))
+			}
 		}
 
 		time.Sleep(time.Duration(math.Pow(2, backoff)) * time.Second)
@@ -109,17 +172,33 @@ func handleOutput() {
 	}
 }
 
+func keepalive() {
+	if !cfg.Options.KeepAlive {
+		return
+	}
+	for {
+		signalClient.Encode(&signald.GetUser{
+			Username:        cfg.Defaults.Sender,
+			RecipientNumber: cfg.Defaults.Sender,
+		})
+		time.Sleep(5 * time.Minute)
+	}
+}
+
 func hook(w http.ResponseWriter, req *http.Request) {
-  var m Message
-  err := json.NewDecoder(req.Body).Decode(&m)
-  if err != nil {
-    log.Printf("Decoding /alert failed: %v", err)
-    http.Error(w, "Decode failed", http.StatusBadRequest)
-  }
+	receivedMetric.Add(1)
+	var m Message
+	err := json.NewDecoder(req.Body).Decode(&m)
+	if err != nil {
+		log.Printf("Decoding /alert failed: %v", err)
+		http.Error(w, "Decode failed", http.StatusBadRequest)
+		errorsMetric.With(prometheus.Labels{"type": "decode"}).Add(1)
+	}
 	err = handle(&m)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Handling alert failed", http.StatusInternalServerError)
+		errorsMetric.With(prometheus.Labels{"type": "handle"}).Add(1)
 	} else {
 		fmt.Fprintln(w, "ok")
 	}
@@ -139,7 +218,7 @@ func handle(m *Message) error {
 
 	for _, to := range recv.To {
 		send := &signald.Send{
-			Username: recv.Sender,
+			Username:    recv.Sender,
 			MessageBody: body,
 		}
 		if strings.HasPrefix(to, "tel:") {

@@ -11,6 +11,7 @@ type Config struct {
 	Defaults Receiver `yaml:"defaults"`
 	Templates []string `yaml:"templates"`
 	Receivers []*Receiver `yaml:"receivers"`
+	Options Options `yaml:"options"`
 }
 
 type Receiver struct {
@@ -19,6 +20,10 @@ type Receiver struct {
 	Sender string `yaml:"sender"`
 	Subscribe *bool `yaml:"subscribe"`
 	To []string `yaml:"to"`
+}
+
+type Options struct {
+	KeepAlive bool `yaml:"keep_alive"`
 }
 
 func Load(s []byte) (*Config, error) {

@@ -1,0 +1,57 @@
+# Example Prometheus rules for alertmanager-signald-webhook
+
+groups:
+  - name: alertmanager-signald-webhook
+    rules:
+      - alert: JobDown
+        expr: |
+          sum(up{job="alertmanager-signald-webhook"}) == 0
+            or absent(up{job="alertmanager-signald-webhook"}) == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is down"
+
+      - alert: SignalWebhook_NotConnected
+        expr: |
+          signald_webhook_signal_connected == 0
+        # Should cover signald restarts
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is not connected to signald"
+          description: |
+            Not connected over the Unix domain socket to signald, check that
+            signald is running and check the logs.
+
+      - record: instance:signald_webhook_alerts_errors:rate5m
+        expr: |
+          sum(rate(signald_webhook_alerts_errors_total[5m])) without ()
+      - alert: SignalWebhook_AlertFailures
+        expr: |
+          instance:signald_webhook_alerts_errors:rate5m > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} has errors handling alerts"
+          description: |
+            Alert delivery is failing due to errors in {{ $labels.type }}.
+            Check the logs on {{ $labels.instance }}.
+
+      - alert: SignalWebhook_NotSeeingKeepalives
+        expr: |
+          # Only if keep-alives are enabled:
+          signald_webhook_signal_keepalive > 0
+            and signald_webhook_signal_keepalive < time() - 300
+        # 5 minutely keepalives expected, plus 5 minutes pending => 10m of
+        # Signal (or internet...) downtime before an alert.
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is unable to contact Signal"
+          description: |
+            Unable to query Signal via Signald.
+            Check connectivity to Signal.
