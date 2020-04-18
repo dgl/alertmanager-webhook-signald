@@ -21,10 +21,11 @@ var (
 	flagListen = flag.String("listen", ":9716", "[ip]:port to listen on for HTTP")
 	flagConfig = flag.String("config", "", "YAML configuration filename")
 
-	signalClient *signald.Client
-	cfg          *Config
-	receivers    = map[string]*Receiver{}
-	templates    *template.Template
+	signalClient    *signald.Client
+	cfg             *Config
+	receivers       = map[string]*Receiver{}
+	templates       *template.Template
+	lastKeepAliveID string
 )
 
 var (
@@ -155,7 +156,9 @@ func handleOutput() {
 				signaldInfoMetric.With(
 					prometheus.Labels{"name": r.Data["name"], "version": r.Data["version"]}).Set(1)
 			case *signald.User:
-				signaldLastKeepaliveMetric.Set(float64(time.Now().Unix()))
+				if r.ID == lastKeepAliveID {
+					signaldLastKeepaliveMetric.Set(float64(time.Now().Unix()))
+				}
 			}
 		}
 
@@ -177,10 +180,12 @@ func keepalive() {
 		return
 	}
 	for {
-		signalClient.Encode(&signald.GetUser{
+		req := &signald.GetUser{
 			Username:        cfg.Defaults.Sender,
 			RecipientNumber: cfg.Defaults.Sender,
-		})
+		}
+		signalClient.Encode(req)
+		lastKeepAliveID = req.ID
 		time.Sleep(5 * time.Minute)
 	}
 }
