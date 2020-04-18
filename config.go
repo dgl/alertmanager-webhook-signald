@@ -8,18 +8,18 @@ import (
 )
 
 type Config struct {
-	Defaults Receiver `yaml:"defaults"`
-	Templates []string `yaml:"templates"`
+	Defaults  Receiver    `yaml:"defaults"`
+	Templates []string    `yaml:"templates"`
 	Receivers []*Receiver `yaml:"receivers"`
-	Options Options `yaml:"options"`
+	Options   Options     `yaml:"options"`
 }
 
 type Receiver struct {
-  Name string `yaml:"name"`
-	Template string `yaml:"template"`
-	Sender string `yaml:"sender"`
-	Subscribe *bool `yaml:"subscribe"`
-	To []string `yaml:"to"`
+	Name      string   `yaml:"name"`
+	Template  string   `yaml:"template"`
+	Sender    string   `yaml:"sender"`
+	Subscribe *bool    `yaml:"subscribe"`
+	To        []string `yaml:"to"`
 }
 
 type Options struct {
@@ -41,24 +41,24 @@ func LoadFile(file string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-  resolveFilepaths(filepath.Dir(file), cfg)
+	resolveFilepaths(filepath.Dir(file), cfg)
 	expandDefaults(cfg)
-  return cfg, nil
+	return cfg, nil
 }
 
 // resolveFilepaths joins all relative paths in a configuration
 // with a given base directory.
 func resolveFilepaths(baseDir string, cfg *Config) {
-  join := func(fp string) string {
-    if len(fp) > 0 && !filepath.IsAbs(fp) {
-      fp = filepath.Join(baseDir, fp)
-    }
-    return fp
-  }
+	join := func(fp string) string {
+		if len(fp) > 0 && !filepath.IsAbs(fp) {
+			fp = filepath.Join(baseDir, fp)
+		}
+		return fp
+	}
 
-  for i, tf := range cfg.Templates {
-    cfg.Templates[i] = join(tf)
-  }
+	for i, tf := range cfg.Templates {
+		cfg.Templates[i] = join(tf)
+	}
 }
 
 func expandDefaults(cfg *Config) {
