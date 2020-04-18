@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/dgl/alertmanager-webhook-signald/signald"
 )
@@ -78,6 +79,7 @@ func main() {
 	go handleOutput()
 
   http.HandleFunc("/alert", hook)
+	http.Handle("/metrics", promhttp.Handler())
   log.Fatal(http.ListenAndServe(*flagListen, nil))
 }
 
