@@ -74,7 +74,7 @@ func main() {
 	var err error
 	cfg, err = LoadFile(*flagConfig)
 	if err != nil {
-		log.Fatal(*flagConfig, ": ", err)
+		log.Fatal(err)
 	}
 
 	if len(cfg.Receivers) == 0 {
