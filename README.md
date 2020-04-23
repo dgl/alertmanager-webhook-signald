@@ -3,8 +3,6 @@
 This implements an alertmanager webhook that can connect to
 [signald](https://github.com/thefinn93/signald).
 
-Pretty alpha right now (in particular signald is beta).
-
 ## Setup
 
 Follow https://github.com/thefinn93/signald#quick-start and get a number
