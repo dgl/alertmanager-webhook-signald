@@ -18,6 +18,7 @@ var typeMap = map[string]Typed{
 	"subscribed": &Subscribed{},
 	"get_user":   &GetUser{},
 	"user":       &User{},
+	"message":    &Message{},
 }
 
 type Request struct {
@@ -134,4 +135,17 @@ func (s User) New() interface{} {
 
 func (s User) Type() string {
 	return "user"
+}
+
+type Message struct {
+	Response
+	Data map[string]interface{}
+}
+
+func (s Message) New() interface{} {
+	return &Message{}
+}
+
+func (s Message) Type() string {
+	return "message"
 }

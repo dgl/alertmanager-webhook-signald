@@ -11,6 +11,9 @@ options:
   # Send a query to the server, which the last response time to is exported in
   # signald_webhook_signal_keepalive_seconds (see example-rules.yaml too).
   keep_alive: true
+  # Enable commands for known senders, currently just "ping" to test the bot is
+  # connected.
+  commands: true
 
 receivers:
   - name: something
@@ -18,3 +21,7 @@ receivers:
       - group:xxxx
       - tel:+44...
     # Optional: the sender, template fields as in defaults above.
+  - name: signal_group
+    to:
+      # Go templates will be expanded
+      - "group:{{ .CommonAnnotions.signal_group }}"

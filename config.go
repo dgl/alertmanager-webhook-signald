@@ -24,6 +24,7 @@ type Receiver struct {
 
 type Options struct {
 	KeepAlive bool `yaml:"keep_alive"`
+	Commands  bool `yaml:"commands"`
 }
 
 func Load(s []byte) (*Config, error) {

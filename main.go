@@ -159,6 +159,21 @@ func handleOutput() {
 				if r.ID == lastKeepAliveID {
 					signaldLastKeepaliveMetric.Set(float64(time.Now().Unix()))
 				}
+			case *signald.Message:
+				msg, ok := r.Data["dataMessage"].(map[string]interface{})
+				if !ok {
+					// typing etc
+					continue
+				}
+				source, ok := r.Data["source"].(string)
+				if !ok {
+					continue
+				}
+				username, ok := r.Data["username"].(string)
+				if !ok {
+					continue
+				}
+				handleCommand(username, source, msg)
 			}
 		}
 
@@ -171,6 +186,59 @@ func handleOutput() {
 		} else {
 			log.Print("Connected to signald")
 			backoff = 0
+		}
+	}
+}
+
+func getGroupId(msg map[string]interface{}) string {
+	if info, ok := msg["groupInfo"].(map[string]interface{}); ok {
+		return info["groupId"].(string)
+	}
+	return ""
+}
+
+func handleCommand(username, source string, msg map[string]interface{}) {
+	if !cfg.Options.Commands {
+		return
+	}
+
+	allowed := false
+	groupId := getGroupId(msg)
+	for _, r := range cfg.Receivers {
+		for _, to := range r.To {
+			if strings.HasPrefix(to, "tel:") {
+				if to[4:] == source {
+					allowed = true
+				}
+			} else if len(groupId) > 0 && strings.HasPrefix(to, "group:") {
+				if to[6:] == groupId {
+					allowed = true
+				}
+			}
+		}
+	}
+	if !allowed {
+		log.Print("Ignoring command from unknown source: %q, %v", source, msg)
+		return
+	}
+
+	text, ok := msg["message"].(string)
+	if !ok {
+		return
+	}
+
+	if strings.ToLower(text) == "ping" {
+		send := &signald.Send{
+			Username:    username,
+			MessageBody: "pong",
+		}
+		if msg["groupInfo"] != nil {
+			send.RecipientGroupID = groupId
+		} else {
+			send.RecipientNumber = source
+		}
+		if err := signalClient.Encode(send); err != nil {
+			log.Print("Failed sending reply: %v", err)
 		}
 	}
 }
@@ -198,6 +266,7 @@ func hook(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Decoding /alert failed: %v", err)
 		http.Error(w, "Decode failed", http.StatusBadRequest)
 		errorsMetric.With(prometheus.Labels{"type": "decode"}).Add(1)
+		return
 	}
 	err = handle(&m)
 	if err != nil {
@@ -221,10 +290,16 @@ func handle(m *Message) error {
 		body = fmt.Sprintf("%#v: Template expansion failed: %v", m.GroupLabels, err)
 	}
 
-	for _, to := range recv.To {
+	for _, toTmpl := range recv.To {
 		send := &signald.Send{
 			Username:    recv.Sender,
 			MessageBody: body,
+		}
+		var to string
+		to, err = templates.ExecuteTextString(toTmpl, m)
+		if err != nil {
+			log.Printf("Error executing to template: %q: %v", toTmpl, err)
+			continue
 		}
 		if strings.HasPrefix(to, "tel:") {
 			send.RecipientNumber = to[4:]
