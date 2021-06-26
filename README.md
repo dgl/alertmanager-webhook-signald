@@ -32,7 +32,7 @@ Save something like the following as *config.yaml*:
 ```yaml
 defaults:
   # Phone number of sender, must be registered in this signald per Setup.
-  sender: +1xxx
+  sender: +1555...
   template: '{{ template "signal.message" . }}'
   # Subscribe to responses from signald. May help to keep the connection alive.
   subscribe: true
@@ -50,6 +50,9 @@ receivers:
 ```
 
 See [example.yaml](example.yaml) for a more complete configuration example.
+
+To get ID to put after `group:` you can use `signaldctl`, add the account to
+the group, then run `signaldctl group list -a +1555...`.
 
 You'll also need a template file for the alert message text, just putting
 [alerts.tmpl](alerts.tmpl) in the same directory as the configuration file will
