@@ -19,6 +19,7 @@ import (
 
 var (
 	flagListen = flag.String("listen", ":9716", "[ip]:port to listen on for HTTP")
+	flagSocket = flag.String("signald", signald.DefaultPath, "UNIX socket to connect to signald on")
 	flagConfig = flag.String("config", "", "YAML configuration filename")
 
 	signalClient    *signald.Client
@@ -97,7 +98,7 @@ func main() {
 		log.Fatalf("Error parsing templates: %v", err)
 	}
 
-	signalClient, err = signald.New()
+	signalClient, err = signald.NewPath(*flagSocket)
 	if err != nil {
 		log.Printf("Error connecting to signald: %v, will attempt to connect later", err)
 	}
