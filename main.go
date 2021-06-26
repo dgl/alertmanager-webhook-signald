@@ -236,7 +236,9 @@ func handleCommand(username, source string, msg map[string]interface{}) {
 		if msg["groupInfo"] != nil {
 			send.RecipientGroupID = groupId
 		} else {
-			send.RecipientAddress.Number = source
+			send.RecipientAddress = &signald.JSONAddress{
+				Number: source,
+			}
 		}
 		if err := signalClient.Encode(send); err != nil {
 			log.Printf("Failed sending reply: %v", err)
@@ -305,7 +307,9 @@ func handle(m *Message) error {
 			continue
 		}
 		if strings.HasPrefix(to, "tel:") {
-			send.RecipientAddress.Number = to[4:]
+			send.RecipientAddress = &signald.JSONAddress {
+				Number: to[4:],
+			}
 		} else if strings.HasPrefix(to, "group:") {
 			send.RecipientGroupID = to[6:]
 		} else {

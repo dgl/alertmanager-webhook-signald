@@ -22,7 +22,7 @@ var typeMap = map[string]Typed{
 }
 
 type JSONAddress struct {
-	Number string `json:"number"`
+	Number string `json:"number,omitempty"`
 	Relay  string `json:"relay,omitempty"`
 	UUID   string `json:"uuid,omitempty"`
 }
@@ -63,7 +63,7 @@ type JSONAttachment struct {
 type Send struct {
 	Request
 	Username         string           `json:"username"`
-	RecipientAddress JSONAddress      `json:"recipientAddress,omitempty"`
+	RecipientAddress *JSONAddress      `json:"recipientAddress,omitempty"`
 	RecipientGroupID string           `json:"recipientGroupId,omitempty"`
 	MessageBody      string           `json:"messageBody"`
 	Attachments      []JSONAttachment `json:"attachments,omitempty"`
