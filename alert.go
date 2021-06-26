@@ -19,6 +19,7 @@ type Message struct {
 	Alerts            []*Alert          `json:"alerts"`
 }
 
+// Alert is contained in a Message
 type Alert struct {
 	Parent       *Message          `json:"-"`
 	Status       string            `json:"status"`

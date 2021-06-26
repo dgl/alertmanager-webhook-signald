@@ -69,6 +69,7 @@ func (c *Client) Disconnect() error {
 	return conn.Close()
 }
 
+// Encode message and write it to signald
 func (c *Client) Encode(req interface{}) error {
 	typed, ok := req.(Typed)
 	if !ok {
@@ -81,13 +82,14 @@ func (c *Client) Encode(req interface{}) error {
 			return err
 		}
 	}
-	c.id += 1
+	c.id++
 	typed.SetID(c.id)
 	j, _ := json.Marshal(req)
 	log.Printf("> %s", string(j))
 	return c.encoder.Encode(req)
 }
 
+// Decode message coming from signald
 func (c *Client) Decode() (interface{}, error) {
 	if c.conn == nil {
 		// We only connect when trying to send
