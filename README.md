@@ -14,8 +14,16 @@ directory (`$(go env GOPATH)/bin/alertmanager-webhook-signald`).
 
 ## Setup
 
-Follow https://github.com/thefinn93/signald#quick-start and get a number
-registered in signald. Set this number as the 'sender' in the config below.
+Follow the account creation steps at
+https://signald.org/articles/getting-started/ and get a number registered in
+your signald instance. Set this number as the 'sender' in the config below.
+
+Example:
+
+```
+go get gitlab.com/signald/signald-go/cmd/signaldctl
+signaldctl account register +1555...
+```
 
 ## Configuration
 
