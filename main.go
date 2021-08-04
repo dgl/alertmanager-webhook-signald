@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"os"
 
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,6 +22,7 @@ var (
 	flagListen = flag.String("listen", ":9716", "[ip]:port to listen on for HTTP")
 	flagSocket = flag.String("signald", signald.DefaultPath, "UNIX socket to connect to signald on")
 	flagConfig = flag.String("config", "", "YAML configuration filename")
+	flagCheck = flag.Bool("check", false, "Only check if connected to signald")
 
 	signalClient    *signald.Client
 	cfg             *Config
@@ -130,6 +132,15 @@ func main() {
 		signalClient.Encode(&signald.Subscribe{
 			Username: user,
 		})
+	}
+
+	if *flagCheck {
+	  if signalClient.Connected() {
+		log.Print("signald socket is connected")
+		os.Exit(0)
+	  }
+	  log.Fatal("Error: signald socket is not connected")
+	  os.Exit(1)
 	}
 
 	go handleOutput()
